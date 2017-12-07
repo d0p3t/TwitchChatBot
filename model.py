@@ -130,15 +130,15 @@ class Model():
             state = sess.run(self.cell.zero_state(1, tf.float32))
             if not len(prime) or prime == ' ':
                 prime = random.choice(list(vocab.keys()))
-            print(prime)
+            #print(prime)
             for word in prime.split()[:-1]:
-                print(word)
+                #print(word)
                 x = np.zeros((1, 1))
                 x[0, 0] = vocab.get(word, 0)
                 feed = {self.input_data: x, self.initial_state: state}
                 [state] = sess.run([self.final_state], feed)
 
-            ret = prime
+            #ret = prime
             word = prime.split()[-1]
             for n in range(num):
                 x = np.zeros((1, 1))
@@ -158,7 +158,7 @@ class Model():
                     sample = weighted_pick(p)
 
                 pred = words[sample]
-                ret += ' ' + pred
+                ret += pred + ' '
                 word = pred
         elif pick == 2:
             pred = beam_search_pick(prime, width)

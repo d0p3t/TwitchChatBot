@@ -10,7 +10,7 @@ REDIS = redis.StrictRedis(host='localhost', port=6379, db=0, charset='utf-8', de
 
 
 class Parser():
-    def __init__(self, key, data_dir='datasets', batch_size=64, seq_length=64):
+    def __init__(self, key, data_dir='datasets', batch_size=64, seq_length=32):
         self.redis = REDIS
         self.key = key
         self.data_dir = data_dir
@@ -30,12 +30,12 @@ class Parser():
             if (os.path.exists(vocab_file) and os.path.exists(tensor_file)) is False:
                 self.preprocess(key=key, vocab_file=vocab_file, tensor_file=tensor_file)
             else:
-                self.load_preprocessed(vocab_file=vocab_file, tensor_file=tensor_file)   
+                self.load_preprocessed(vocab_file=vocab_file, tensor_file=tensor_file)
             self.create_batches()
             self.reset_batch_pointer()
 
             print("PARSER - READY TO TRAIN")
-    
+
     def preprocess(self, key, vocab_file, tensor_file):
         print("PARSER - PREPROCESSING DATA...")
 
@@ -43,7 +43,7 @@ class Parser():
         data = ""
         for message in messages:
             data += " " + message
-        
+
         clean_data = self.clean_str(string=data)
         x_text = clean_data.split()
 
@@ -52,7 +52,7 @@ class Parser():
 
         with open(vocab_file, 'wb') as filename:
             cPickle.dump(self.chars, filename)
-        
+
         self.tensor = np.array(list(map(self.vocab.get, x_text)))
         np.save(tensor_file, self.tensor)
 
@@ -63,10 +63,10 @@ class Parser():
         print("PARSER - LOADING PREPROCESSED DATA...")
 
         with open(vocab_file, 'rb') as filename:
-            self.chars = cPickle.load(filename)
+            self.words = cPickle.load(filename)
 
-        self.vocab_size = len(self.chars)
-        self.vocab = dict(zip(self.chars, range(len(self.chars))))
+        self.vocab_size = len(self.words)
+        self.vocab = dict(zip(self.words, range(len(self.words))))
         self.tensor = np.load(tensor_file)
         self.num_batches = int(self.tensor.size / (self.batch_size * self.seq_length))
 
@@ -105,7 +105,7 @@ class Parser():
             self.batch_size, -1), self.num_batches, 1)
         self.y_batches = np.split(ydata.reshape(
             self.batch_size, -1), self.num_batches, 1)
-        
+
         print("PARSER - CREATING BATCHES DONE")
 
     def next_batch(self):

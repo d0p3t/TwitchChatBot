@@ -1,19 +1,16 @@
 from __future__ import print_function
 
-import sys
 import irc.bot
 import requests
-import numpy as np
 import tensorflow as tf
 
-import argparse
-import time
 import os
-import string
 import re
+import json
+import random
+
 from six.moves import cPickle
 
-from parser import Parser
 from model import Model
 
 
@@ -37,12 +34,15 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         print(f'Connecting to {server} on port {port}...')
         irc.bot.SingleServerIRCBot.__init__(
             self, [(server, port, token)], username, username)
-    
+
         with open(os.path.join('datasets', 'config.pkl'), 'rb') as f:
             saved_args = cPickle.load(f)
         with open(os.path.join('datasets', 'vocab.pkl'), 'rb') as f:
             self.words, self.vocab = cPickle.load(f)
         self.model = Model(saved_args, True)
+
+        self.twitch_emotes = self.js_r('twitch_global_emotes.json')
+        self.custom_emotes = self.js_r('twitch_custom_emotes.json')
 
     def on_welcome(self, c, e):
         print(f'Joining {self.channel}')
@@ -57,16 +57,23 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
         self.msg_count += 1
 
-        if self.msg_count % 25 == 0:
+        if self.msg_count % 2 == 0:
             self.do_predict(e)
-        # If a chat message starts with an exclamation point, try to run it as a command
-        # if e.arguments[0][:1] == '!':
-        #     cmd = e.arguments[0].split(' ')[0][1:]
-        #     print(f'Received command: {cmd}')
-        #     self.do_command(e, cmd)
+
+        if e.arguments[0][:1] == '!':
+            cmd = e.arguments[0].split(' ')[0][1:]
+            print(f'Received command: {cmd}')
+            self.do_command(e, cmd)
         return
 
+    def js_r(self, filename):
+        with open(filename) as f_in:
+            return(json.load(f_in))
+
     def clean_str(self, string):
+        # string = re.sub(r" \(", " (", string)
+        # string = re.sub(r" \)", " )", string)
+        # string = re.sub(r" \\\?", "? ", string)
         string = re.sub(r" 's", "'s", string)
         string = re.sub(r" 've", "'ve", string)
         string = re.sub(r" 't", "n't", string)
@@ -74,68 +81,43 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         string = re.sub(r" 'd", "'d", string)
         string = re.sub(r" 'll", "'ll", string)
         string = re.sub(r" , ", ", ", string)
-        string = re.sub(r" . ", ". ", string)
-        string = re.sub(r" ! ", "! ", string)
-        string = re.sub(r" \( ", " (", string)
-        string = re.sub(r" \) ", " )", string)
-        string = re.sub(r" \? ", "? ", string)
+        # string = re.sub(r" . ", ". ", string)
+        # string = re.sub(r" !", "! ", string)
         string = re.sub(r"\s{2,}", " ", string)
         return string
 
     def do_predict(self, e):
         c = self.connection
-        #c.privmsg(self.channel, 'hi there')
         with tf.Session() as sess:
             tf.global_variables_initializer().run()
             saver = tf.train.Saver(tf.global_variables())
             ckpt = tf.train.get_checkpoint_state('datasets')
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
-                output = self.model.sample(sess, self.words, self.vocab, 10, ' ', 1, 2, 4)
-                #print(beam)
-                print(f"[alpha] {output}")
+
+                output_length = random.randint(8, 18)
+                output = self.model.sample(sess, self.words, self.vocab, output_length, ' ', 1, 2, 2)
+
+                print(output)
+
                 for word in output.split():
-                    if word == 'kappa':
-                        output = string.replace(output, 'kappa', 'Kappa')
-                    elif word == 'serpencool':
-                        output = string.replace(output, 'serpencool', 'serpenCool')
-                    elif word == 'lul':
-                        output = string.replace(output, 'lul', 'LUL')
+                    for emote in self.twitch_emotes:
+                        if emote.lower() == word:
+                            output = str.replace(output, word, emote)
+                    for emote in self.custom_emotes:
+                        if emote.lower() == word:
+                            output = str.replace(output, word, emote)
+
                 final_output = self.clean_str(output)
-                c.privmsg(self.channel, f"[alpha] {final_output}")
+                c.privmsg(self.channel, final_output)
 
     def do_command(self, e, cmd):
         c = self.connection
 
-        # Poll the API to get current game.
-        if cmd == "game":
-            url = 'https://api.twitch.tv/kraken/channels/' + self.channel_id
-            headers = {'Client-ID': self.client_id,
-                       'Accept': 'application/vnd.twitchtv.v5+json'}
-            r = requests.get(url, headers=headers).json()
-            c.privmsg(self.channel, r['display_name'] +
-                      ' is currently playing ' + r['game'])
-
-        # Poll the API the get the current status of the stream
-        elif cmd == "title":
-            url = 'https://api.twitch.tv/kraken/channels/' + self.channel_id
-            headers = {'Client-ID': self.client_id,
-                       'Accept': 'application/vnd.twitchtv.v5+json'}
-            r = requests.get(url, headers=headers).json()
-            c.privmsg(self.channel, r['display_name'] +
-                      ' channel title is currently ' + r['status'])
-
-        # Provide basic information to viewers for specific commands
-        elif cmd == "raffle":
-            message = "This is an example bot, replace this text with your raffle text."
-            c.privmsg(self.channel, message)
-        elif cmd == "schedule":
-            message = "This is an example bot, replace this text with your schedule text."
+        if cmd == "chatbot":
+            message = "/me Using 900,000 chat messages, this chatbot has been trained to emulate a chat user. The model is a RNN trained word-by-word."
             c.privmsg(self.channel, message)
 
-        # The command was not recognized
-        else:
-            c.privmsg(self.channel, "Did not understand command: " + cmd)
 
 def main():
     username = "d0p3tbot"

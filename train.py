@@ -28,11 +28,11 @@ def main():
                         help='rnn, gru, or lstm')
     parser.add_argument('--batch_size', type=int, default=64,
                         help='minibatch size')
-    parser.add_argument('--seq_length', type=int, default=64,
+    parser.add_argument('--seq_length', type=int, default=32,
                         help='RNN sequence length')
     parser.add_argument('--num_epochs', type=int, default=50,
                         help='number of epochs')
-    parser.add_argument('--save_every', type=int, default=1000,
+    parser.add_argument('--save_every', type=int, default=2000,
                         help='save frequency')
     parser.add_argument('--grad_clip', type=float, default=5.,
                         help='clip gradients at this value')
@@ -40,7 +40,7 @@ def main():
                         help='learning rate')
     parser.add_argument('--decay_rate', type=float, default=0.97,
                         help='decay rate for rmsprop')
-    parser.add_argument('--gpu_mem', type=float, default=0.666,
+    parser.add_argument('--gpu_mem', type=float, default=0.75,
                         help='%% of gpu memory to be allocated to this process. Default is 66.6%%')
     parser.add_argument('--init_from', type=str, default=None,
                         help="""continue training from saved model at this path. Path must contain files saved by previous training process:
@@ -123,7 +123,6 @@ def train(args):
                 print("TRAINING - ASSIGNED EPOCH POINTER")
             print("TRAINING - TIME TO LEARN...")
             for b in range(data_loader.pointer, data_loader.num_batches):
-                print(f"TRAINING - BATCH {b}/{data_loader.num_batches}")
                 start = time.time()
                 x, y = data_loader.next_batch()
                 feed = {model.input_data: x, model.targets: y, model.initial_state: state,

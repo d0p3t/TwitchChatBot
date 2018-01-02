@@ -14,11 +14,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default='datasets',
                        help='model directory to load stored checkpointed models from')
-    parser.add_argument('-n', type=int, default=5,
+    parser.add_argument('-n', type=int, default=10,
                        help='number of words to sample')
-    parser.add_argument('--prime', type=str, default=' ',
+    parser.add_argument('--prime', type=str, default='lul',
                        help='prime text')
-    parser.add_argument('--pick', type=int, default=1,
+    parser.add_argument('--pick', type=int, default=2,
                        help='1 = weighted pick, 2 = beam search pick')
     parser.add_argument('--width', type=int, default=4,
                        help='width of the beam search')

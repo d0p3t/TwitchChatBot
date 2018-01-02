@@ -57,7 +57,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
         self.msg_count += 1
 
-        if self.msg_count % 2 == 0:
+        if self.msg_count % 20 == 0:
             self.do_predict(e)
 
         if e.arguments[0][:1] == '!':
@@ -71,15 +71,16 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             return(json.load(f_in))
 
     def clean_str(self, string):
-        # string = re.sub(r" \(", " (", string)
-        # string = re.sub(r" \)", " )", string)
-        # string = re.sub(r" \\\?", "? ", string)
+        string = re.sub(r" \(", " ", string)
+        string = re.sub(r" \)", " ", string)
+        string = re.sub(r" \\\?", "? ", string)
         string = re.sub(r" 's", "'s", string)
         string = re.sub(r" 've", "'ve", string)
         string = re.sub(r" 't", "n't", string)
         string = re.sub(r" 're", "'re", string)
         string = re.sub(r" 'd", "'d", string)
         string = re.sub(r" 'll", "'ll", string)
+        string = re.sub(r" n't", "n't", string)
         string = re.sub(r" , ", ", ", string)
         # string = re.sub(r" . ", ". ", string)
         # string = re.sub(r" !", "! ", string)
@@ -95,8 +96,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
 
-                output_length = random.randint(8, 18)
-                output = self.model.sample(sess, self.words, self.vocab, output_length, ' ', 1, 2, 2)
+                output_length = random.randint(3, 10)
+                output = self.model.sample(
+                    sess, self.words, self.vocab, output_length, ' ', 1, 1, 4)
 
                 print(output)
 
@@ -123,7 +125,7 @@ def main():
     username = "d0p3tbot"
     client_id = "saxy6rk8qyaj31s5h2sxkujauwsr7c"
     token = "oauth:k31tvibwb9i8fquqcctxos4wdj81td"
-    channel = "d0p3t"
+    channel = "serpent_ai"
 
     bot = TwitchBot(username, client_id, token, channel)
     bot.start()
